@@ -1,0 +1,13 @@
+[project]
+name = "hebqa"
+version = "0.1.0"
+description = "GEPA prompt optimization for Hebrew question answering"
+requires-python = ">=3.12"
+dependencies = ["dspy>=3.4", "gepa"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
