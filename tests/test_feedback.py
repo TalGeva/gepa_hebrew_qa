@@ -39,9 +39,14 @@ def test_gepa_metric_returns_score_and_feedback():
 
 def test_score_only_feedback_has_no_diagnosis():
     result = make_gepa_metric("score")(_gold(), dspy.Prediction(answer="שרת"))
-    assert result.feedback == f"ציון TLNLS: {result.score:.2f}."
+    assert result.feedback == f"ציון: {result.score:.2f}."
 
 
 def test_unknown_feedback_mode_raises():
     with pytest.raises(ValueError):
         make_gepa_metric("verbose")
+
+
+def test_feedback_does_not_name_the_metric():
+    for mode in ("hebrew", "score"):
+        assert "TLNLS" not in make_gepa_metric(mode)(_gold(), dspy.Prediction(answer="שרת")).feedback

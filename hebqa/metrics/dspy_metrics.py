@@ -24,7 +24,7 @@ def make_gepa_metric(feedback: str = "hebrew"):
     def gepa_metric(gold, pred, trace=None, pred_name=None, pred_trace=None) -> dspy.Prediction:
         answer = pred.get("answer") or ""
         score = best_over_golds(tlnls, answer, gold.answers)
-        text = f"ציון TLNLS: {score:.2f}."
+        text = f"ציון: {score:.2f}."
         if feedback == "hebrew":
             text += " " + hebrew_feedback(answer, gold.answers, gold.context)
         return dspy.Prediction(score=score, feedback=text)
