@@ -14,10 +14,14 @@ def run_gepa(
     reflection_lm: dspy.LM,
     cfg: GEPAConfig,
     log_dir: str,
+    metric=None,
 ) -> dspy.Module:
-    """Optimize the program's instructions. The task LM is whatever dspy.configure set."""
+    """Optimize the program's instructions. The task LM is whatever dspy.configure set.
+
+    metric defaults to the extractive TLNLS metric with cfg.feedback.
+    """
     optimizer = dspy.GEPA(
-        metric=make_gepa_metric(cfg.feedback),
+        metric=metric or make_gepa_metric(cfg.feedback),
         auto=cfg.auto,
         reflection_lm=reflection_lm,
         reflection_minibatch_size=cfg.reflection_minibatch_size,

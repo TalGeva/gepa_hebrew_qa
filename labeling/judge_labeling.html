@@ -1,0 +1,433 @@
+<title>דירוג תשובות לשופט</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@400;500;700&display=swap">
+<style>
+/* Layout: a reading column for the source document beside a scoring sheet, like a marker's desk; stacks on phones. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5b6875;
+  --line: #d9dfe5;
+  --accent: #1f5f8b;
+  --accent-soft: #e3eef6;
+  --done: #2e7d4f;
+  --done-soft: #e2f2e8;
+  --warn: #a5561b;
+  --warn-soft: #f8ebdf;
+  --mark: #fde68a;
+  --font-read: "Frank Ruhl Libre", "David", "Times New Roman", serif;
+  --font-ui: "Assistant", "Segoe UI", "Arial Hebrew", Arial, sans-serif;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12171c; --surface: #1a2128; --ink: #e5eaef; --muted: #9aa7b3; --line: #2c3640;
+    --accent: #7db4dc; --accent-soft: #1d3446; --done: #6cc495; --done-soft: #173426;
+    --warn: #e5a26b; --warn-soft: #3a2717; --mark: #6b5414; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12171c; --surface: #1a2128; --ink: #e5eaef; --muted: #9aa7b3; --line: #2c3640;
+  --accent: #7db4dc; --accent-soft: #1d3446; --done: #6cc495; --done-soft: #173426;
+  --warn: #e5a26b; --warn-soft: #3a2717; --mark: #6b5414; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--font-read); font-weight: 700; font-size: 1.7rem; margin: 0; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; max-width: 75ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.progress { display: flex; align-items: center; gap: 10px; font-variant-numeric: tabular-nums; }
+.meter { width: 160px; max-width: 40vw; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--done); width: 0; transition: width .3s; }
+.nav { display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 6px 12px; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+.grid-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.grid-nav button { width: 34px; padding: 3px 0; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.grid-nav button.rated { background: var(--done-soft); border-color: var(--done); color: var(--done); }
+.grid-nav button.partial { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.grid-nav button.current { outline: 2px solid var(--accent); outline-offset: 1px; }
+details.rubric { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+details.rubric summary { cursor: pointer; font-weight: 600; }
+details.rubric ul { margin: 8px 0 0; padding-inline-start: 20px; display: grid; gap: 6px; max-width: 85ch; }
+main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; min-width: 0; }
+.doc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 32px); overflow: auto; }
+@media (max-width: 900px) { .doc { position: static; max-height: 60vh; } }
+.label { font-size: .78rem; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin: 0 0 4px; }
+.doc-text { font-family: var(--font-read); font-size: 1.05rem; line-height: 1.75; white-space: pre-wrap; margin: 0; max-width: 70ch; }
+.doc-text mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+.sheet { display: grid; gap: 16px; }
+.block p { margin: 0; white-space: pre-wrap; }
+.question { font-family: var(--font-read); font-size: 1.25rem; font-weight: 500; }
+.level { display: inline-block; font-size: .85rem; background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 1px 10px; margin-top: 6px; }
+.answer { border: 2px solid var(--accent); border-radius: 6px; padding: 10px 12px; font-family: var(--font-read); font-size: 1.08rem; }
+.claims { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.claims li { border-inline-start: 3px solid var(--line); padding-inline-start: 10px; }
+.claim-text { margin: 0 0 4px; }
+.quote { display: block; width: 100%; text-align: start; font-family: var(--font-read); font-size: .95rem; color: var(--muted);
+  background: transparent; border: 1px dashed var(--line); margin-top: 4px; padding: 4px 8px; }
+.quote.missing { border-color: var(--warn); }
+.quote .tag { font-family: var(--font-ui); font-size: .78rem; font-weight: 700; margin-inline-start: 6px; }
+.quote .tag.found { color: var(--done); }
+.quote .tag.notfound { color: var(--warn); }
+.hint { font-size: .85rem; color: var(--muted); margin: 0; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+legend { font-weight: 700; padding: 0; margin-bottom: 2px; }
+.anchors { font-size: .82rem; color: var(--muted); margin: 0; }
+.scale { display: flex; gap: 6px; flex-wrap: wrap; }
+.scale input { position: absolute; opacity: 0; pointer-events: none; }
+.scale label { min-width: 44px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0 10px; }
+.scale input:checked + label { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.scale input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+textarea { width: 100%; min-height: 56px; font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--surface); color: var(--ink); resize: vertical; }
+textarea#correction { min-height: 110px; font-family: var(--font-read); }
+.status { font-size: .9rem; display: inline-flex; gap: 6px; align-items: center; border-radius: 99px; padding: 2px 10px; }
+.status.saved { background: var(--done-soft); color: var(--done); }
+.status.partial { background: var(--warn-soft); color: var(--warn); }
+.status.idle { color: var(--muted); }
+.notice { background: var(--warn-soft); color: var(--warn); border-radius: var(--radius); padding: 12px 14px; }
+.empty { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .meter > span { transition: none; } }
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header>
+    <h1>דירוג תשובות לתיקוף השופט</h1>
+    <p class="lead">דרגו כל תשובה לפי הנחיות התיוג Part II: חמישה מדדים, ציון 0–2. לחיצה על ציטוט מסמנת אותו במסמך. תשובה שקיבלה פחות מ־2 באחד המדדים צריכה תיקון, בתיבת התיקון. הציונים נשמרים אוטומטית כשכל המדדים מסומנים, ואינם גלויים למדרגים אחרים.</p>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <div class="bar">
+    <div class="progress"><span id="count">טוען…</span><div class="meter" aria-hidden="true"><span id="meter"></span></div></div>
+    <div class="nav">
+      <button id="prev" type="button">הקודם</button>
+      <button id="next" type="button">הבא</button>
+      <button id="nextOpen" type="button" class="primary">לפריט הבא שלא הושלם</button>
+    </div>
+  </div>
+
+  <details class="rubric">
+    <summary>תזכורת: הגדרות המדדים (Part II)</summary>
+    <ul>
+      <li><b>קוהרנטיות:</b> ניסוח התשובה עצמו. 0 משפטים לא קשורים, סתירות פנימיות או לא בעברית · 1 מובנת אך מסורבלת, מקוטעת או מתפלפלת; גם תשובה טובה שאפשר לנסח באופן טבעי יותר · 2 זורמת וטבעית, עם מבנה ברור.</li>
+      <li><b>רלוונטיות:</b> האם עונה ישירות על מה שנשאל, בלי פטפטנות ובלי פרטים לא נחוצים. 0 לא קשורה · 1 כללית, לא ממוקדת או עם פרטים מיותרים · 2 עונה בדיוק ובמישרין. ברמה 0: ציון שהמידע חסר ותוספת מידע שלא נשאל = 1.</li>
+      <li><b>שלמות:</b> האם כל המידע החשוב מהמסמך נמצא בתשובה. 0 חסר פרט מרכזי · 1 חסרים פרטים קטנים · 2 הכול מוצה. ברמה 0 בודקים נכונות: האם באמת אין תשובה במסמך, או שהמודל פספס.</li>
+      <li><b>מהימנות:</b> נצמדת למסמך בלבד, בלי המצאות או ידע חיצוני (מלבד ידע־עולם בסיסי). 0 הזיות או סתירה למסמך · 1 נכונה בבסיסה עם פרטים קטנים ללא סימוכין או פרשנות קלה · 2 כל מילה נתמכת.</li>
+      <li><b>ייחוס וציטוטים:</b> האם לכל פרט מידע יש ציטוט מהמסמך שמאמת אותו. 0 אין ציטוטים, או שאינם קשורים או אינם קיימים · 1 רוב הטענות מגובות, או ציטוט כללי מדי · 2 כל טענה מקושרת לקטע מדויק שמאמת אותה.</li>
+      <li>בהתלבטות בין שני ציונים: בחרו בנמוך והוסיפו הערה. התיקון מינימלי: נצמדים לניסוח של המודל ומתקנים רק את הבעייתי.</li>
+    </ul>
+  </details>
+
+  <div class="grid-nav" id="gridNav" aria-label="מעבר לפריט"></div>
+
+  <main>
+    <section class="panel doc" aria-label="המסמך" id="docPanel">
+      <p class="label">המסמך</p>
+      <p class="doc-text" id="docText"><span class="empty">המסמך יופיע כאן.</span></p>
+    </section>
+
+    <section class="panel sheet" aria-label="דירוג">
+      <div class="block">
+        <p class="label" id="itemLabel">פריט</p>
+        <p class="question" id="question"><span class="empty">הפריטים נטענים. אם הם לא מופיעים, ייתכן שאין לכם עדיין גישה לדף.</span></p>
+        <span class="level" id="level" hidden></span>
+      </div>
+      <div class="block">
+        <p class="label">התשובה לדירוג</p>
+        <p class="answer" id="answer"></p>
+      </div>
+      <div class="block">
+        <p class="label">טענות וציטוטים</p>
+        <p class="hint">לחצו על ציטוט כדי לסמן אותו במסמך. "לא נמצא" = הציטוט אינו מופיע במסמך מילה במילה (בדיקה אוטומטית).</p>
+        <ul class="claims" id="claims"></ul>
+      </div>
+
+      <form id="form" class="sheet" novalidate>
+        <div id="criteria" class="sheet"></div>
+        <div>
+          <label class="label" for="correction">תיקון התשובה (חובה אם ציון כלשהו נמוך מ־2)</label>
+          <textarea id="correction" placeholder="התשובה המתוקנת, בשינוי מינימלי מהניסוח של המודל. אם הבעיה בסימוכין, ציינו את הסימוכין הנכונים."></textarea>
+        </div>
+        <div>
+          <label class="label" for="note">הערה (לא חובה)</label>
+          <textarea id="note" placeholder="נימוק, התלבטות, או בעיה בשאלה"></textarea>
+        </div>
+        <div><span class="status idle" id="status">לא דורג</span></div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<script>
+const CRITERIA = [
+  ["coherence", "קוהרנטיות", "0 לא תקין · 1 מובן אך מסורבל · 2 זורם וטבעי"],
+  ["relevance", "רלוונטיות", "0 לא רלוונטי · 1 לא ממוקד או פטפטני · 2 עונה בדיוק על השאלה"],
+  ["completeness", "שלמות", "0 חסר פרט מרכזי · 1 השמטות מינוריות · 2 שלם (ברמה 0: האם באמת אין תשובה)"],
+  ["faithfulness", "מהימנות", "0 הזיות או סתירה למסמך · 1 פרטים קטנים ללא סימוכין · 2 הכול נתמך"],
+  ["attribution", "ייחוס וציטוטים", "0 אין ציטוטים או שגויים · 1 ייחוס חלקי או כללי מדי · 2 כל טענה מגובה במדויק"],
+];
+const LEVELS = { 0: "רמה 0 · המידע אינו מופיע במסמך", 1: "רמה 1 · איתור ושליפה", 2: "רמה 2 · חיבור 2–3 פרטים" };
+
+const state = { items: [], docs: {}, ratings: {}, drafts: {}, index: 0, uid: null, db: null, canWrite: true, saving: false, pending: false };
+const $ = (id) => document.getElementById(id);
+
+// Quote matching mirrors the judge's mechanical check: whitespace and quote-mark style are ignored.
+const QUOTE_MAP = { "״": '"', "“": '"', "”": '"', "„": '"', "׳": "'", "‘": "'", "’": "'", "`": "'" };
+function normalizeWithMap(text) {
+  let out = "", map = [], space = false;
+  for (let i = 0; i < text.length; i++) {
+    let ch = QUOTE_MAP[text[i]] || text[i];
+    if (/\s/.test(ch)) { if (space || !out) continue; ch = " "; space = true; } else space = false;
+    out += ch; map.push(i);
+  }
+  return { out, map };
+}
+function findQuote(doc, quote) {
+  const d = normalizeWithMap(doc), q = normalizeWithMap(quote).out.trim();
+  const parts = q.split(/\.{3,}|…/).map((p) => p.trim().replace(/^["']+|["']+$/g, "")).filter(Boolean);
+  if (!parts.length) return null;
+  const spans = []; let pos = 0;
+  for (const p of parts) {
+    const at = d.out.indexOf(p, pos);
+    if (at < 0) return null;
+    spans.push([d.map[at], d.map[at + p.length - 1] + 1]);
+    pos = at + p.length;
+  }
+  return spans;
+}
+
+function buildCriteria() {
+  const root = $("criteria");
+  for (const [key, name, anchors] of CRITERIA) {
+    const fs = document.createElement("fieldset");
+    const lg = document.createElement("legend"); lg.textContent = name; fs.append(lg);
+    const p = document.createElement("p"); p.className = "anchors"; p.textContent = anchors; fs.append(p);
+    const scale = document.createElement("div"); scale.className = "scale";
+    for (let v = 0; v <= 2; v++) {
+      const id = `${key}-${v}`;
+      const input = document.createElement("input");
+      input.type = "radio"; input.name = key; input.value = String(v); input.id = id;
+      const label = document.createElement("label"); label.htmlFor = id; label.textContent = String(v);
+      scale.append(input, label);
+    }
+    fs.append(scale); root.append(fs);
+  }
+}
+
+function current() { return state.items[state.index]; }
+function hasScores(r) { return !!r && CRITERIA.every(([k]) => Number.isInteger(r[k])); }
+function needsCorrection(r) { return hasScores(r) && CRITERIA.some(([k]) => r[k] < 2) && !(r.correction || "").trim(); }
+function isDone(r) { return hasScores(r) && !needsCorrection(r); }
+function doneCount() { return state.items.filter((it) => isDone(state.ratings[it.pool_id])).length; }
+
+function readForm() {
+  const r = {};
+  for (const [k] of CRITERIA) {
+    const checked = document.querySelector(`input[name="${k}"]:checked`);
+    if (checked) r[k] = Number(checked.value);
+  }
+  r.correction = $("correction").value.trim();
+  r.note = $("note").value.trim();
+  return r;
+}
+
+function writeForm(r) {
+  for (const [k] of CRITERIA) {
+    for (const input of document.querySelectorAll(`input[name="${k}"]`)) input.checked = !!r && Number(input.value) === r[k];
+  }
+  $("correction").value = (r && r.correction) || "";
+  $("note").value = (r && r.note) || "";
+}
+
+function setStatus() {
+  const it = current(); const el = $("status");
+  if (!it) { el.className = "status idle"; el.textContent = ""; return; }
+  const saved = state.ratings[it.pool_id]; const draft = state.drafts[it.pool_id];
+  if (draft && !hasScores(draft)) { el.className = "status partial"; el.textContent = "חסרים מדדים, לא נשמר"; }
+  else if (state.saving || state.pending) { el.className = "status idle"; el.textContent = "שומר…"; }
+  else if (needsCorrection(saved)) { el.className = "status partial"; el.textContent = "נשמר · חסר תיקון לתשובה"; }
+  else if (isDone(saved)) { el.className = "status saved"; el.textContent = "נשמר"; }
+  else { el.className = "status idle"; el.textContent = "לא דורג"; }
+}
+
+function renderProgress() {
+  const n = state.items.length, done = doneCount();
+  $("count").textContent = n ? `הושלמו ${done} מתוך ${n}` : "אין פריטים עדיין";
+  $("meter").style.width = n ? `${(100 * done) / n}%` : "0";
+  const grid = $("gridNav"); grid.replaceChildren();
+  state.items.forEach((it, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = String(i + 1);
+    b.setAttribute("aria-label", `פריט ${i + 1}`);
+    const r = state.ratings[it.pool_id];
+    if (isDone(r)) b.classList.add("rated"); else if (hasScores(r)) b.classList.add("partial");
+    if (i === state.index) b.classList.add("current");
+    b.addEventListener("click", () => go(i));
+    grid.append(b);
+  });
+  $("prev").disabled = state.index <= 0;
+  $("next").disabled = state.index >= n - 1;
+}
+
+function renderDoc(spans) {
+  const it = current(); const el = $("docText");
+  const doc = it && state.docs[it.question_id];
+  if (!doc) { el.textContent = "המסמך נטען…"; return null; }
+  const text = doc.context; el.replaceChildren();
+  let pos = 0, first = null;
+  for (const [a, b] of spans || []) {
+    el.append(text.slice(pos, a));
+    const m = document.createElement("mark"); m.textContent = text.slice(a, b); el.append(m);
+    if (!first) first = m;
+    pos = b;
+  }
+  el.append(text.slice(pos));
+  return first;
+}
+
+function renderClaims() {
+  const it = current(); const ul = $("claims"); ul.replaceChildren();
+  const doc = state.docs[it.question_id];
+  if (!it.claims || !it.claims.length) {
+    const li = document.createElement("li"); li.className = "empty"; li.textContent = "(אין טענות)"; ul.append(li); return;
+  }
+  it.claims.forEach((c, i) => {
+    const li = document.createElement("li");
+    const p = document.createElement("p"); p.className = "claim-text"; p.textContent = `${i + 1}. ${c.text}`; li.append(p);
+    if (!c.quotes || !c.quotes.length) {
+      const none = document.createElement("p"); none.className = "hint"; none.textContent = "(אין ציטוט)"; li.append(none);
+    }
+    for (const q of c.quotes || []) {
+      const spans = doc ? findQuote(doc.context, q) : null;
+      const b = document.createElement("button"); b.type = "button"; b.className = "quote" + (spans ? "" : " missing");
+      b.append(`"${q}"`);
+      const tag = document.createElement("span"); tag.className = "tag " + (spans ? "found" : "notfound");
+      tag.textContent = doc ? (spans ? "נמצא במסמך" : "לא נמצא במסמך") : ""; b.append(tag);
+      b.addEventListener("click", () => {
+        const m = renderDoc(spans);
+        if (m) m.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      li.append(b);
+    }
+    ul.append(li);
+  });
+}
+
+function renderItem() {
+  const it = current();
+  if (!it) return;
+  $("itemLabel").textContent = `פריט ${state.index + 1} מתוך ${state.items.length}`;
+  $("question").textContent = it.question;
+  $("level").textContent = LEVELS[it.difficulty] || ""; $("level").hidden = !(it.difficulty in LEVELS);
+  $("answer").textContent = it.answer || "(תשובה ריקה)";
+  renderDoc(null);
+  renderClaims();
+  writeForm(state.drafts[it.pool_id] || state.ratings[it.pool_id]);
+  setStatus();
+}
+
+function render() { renderProgress(); renderItem(); }
+
+function go(i) {
+  if (i < 0 || i >= state.items.length || i === state.index) return;
+  state.index = i;
+  render();
+  $("docPanel").scrollTop = 0;
+  window.scrollTo({ top: 0 });
+}
+
+async function persist() {
+  if (state.saving) { state.pending = true; return; }
+  state.saving = true; setStatus();
+  try {
+    await state.db.doc(`ratings/${state.uid}`).set({ items: state.ratings, updated_at: new Date().toISOString() });
+  } catch (e) {
+    showNotice(e && e.code === "invalid_argument"
+      ? "אין לכם הרשאה לשמור ציונים בדף הזה. בקשו מבעלי הדף גישה ברמת Contributor לפחות."
+      : "השמירה נכשלה. בדקו את החיבור לרשת ונסו שוב.");
+  }
+  state.saving = false;
+  if (state.pending) { state.pending = false; return persist(); }
+  setStatus(); renderProgress();
+}
+
+function onChange() {
+  const it = current(); if (!it || !state.canWrite) return;
+  const r = readForm();
+  if (hasScores(r)) {
+    delete state.drafts[it.pool_id];
+    state.ratings = { ...state.ratings, [it.pool_id]: { ...r, saved_at: new Date().toISOString() } };
+    persist();
+  } else {
+    state.drafts[it.pool_id] = r;
+  }
+  setStatus(); renderProgress();
+}
+
+let textTimer;
+function showNotice(text) { const n = $("notice"); n.textContent = text; n.hidden = !text; }
+
+function wire() {
+  for (const input of document.querySelectorAll("#criteria input")) input.addEventListener("change", onChange);
+  for (const id of ["correction", "note"]) {
+    $(id).addEventListener("input", () => { clearTimeout(textTimer); textTimer = setTimeout(onChange, 800); });
+  }
+  $("prev").addEventListener("click", () => go(state.index - 1));
+  $("next").addEventListener("click", () => go(state.index + 1));
+  $("nextOpen").addEventListener("click", () => {
+    const n = state.items.length;
+    for (let s = 1; s <= n; s++) {
+      const i = (state.index + s) % n;
+      if (!isDone(state.ratings[state.items[i].pool_id])) return go(i);
+    }
+    showNotice("כל הפריטים הושלמו. תודה!");
+  });
+}
+
+async function start() {
+  buildCriteria(); wire();
+  const claude = window.claude;
+  const [db, user] = claude && claude.use ? await Promise.all([claude.use("db"), claude.use("user")]) : [null, null];
+  if (!db) { showNotice("לא ניתן לטעון את הפריטים. היכנסו לחשבון claude.ai ופתחו את הדף שוב."); $("count").textContent = ""; return; }
+  state.db = db;
+  state.uid = user ? await user.id() : null;
+  if (!state.uid) { state.canWrite = false; showNotice("אין לכם זהות בדף הזה, ולכן אי אפשר לשמור ציונים. היכנסו לחשבון claude.ai."); }
+
+  const timer = setTimeout(() => { if (!state.items.length) showNotice("הפריטים עדיין לא נטענו. אם זה נמשך, רעננו את הדף או בקשו גישה מבעלי הדף."); }, 10000);
+  db.collection("items").orderBy("order").onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) clearTimeout(timer);
+    state.items = snap.docs.map((d) => d.data());
+    if (state.index >= state.items.length) state.index = 0;
+    if (state.items.length) showNotice("");
+    render();
+  }, () => { clearTimeout(timer); showNotice("לא ניתן לקרוא את הפריטים. ייתכן שאין לכם גישה לדף."); });
+  db.collection("docs").onSnapshot((snap) => {
+    const docs = {}; for (const d of snap.docs) docs[d.id] = d.data();
+    state.docs = docs; if (current()) { renderDoc(null); renderClaims(); }
+  }, () => {});
+  if (state.uid) {
+    db.doc(`ratings/${state.uid}`).onSnapshot((snap) => {
+      if (state.saving || state.pending) return;  // our own write is in flight; keep the local copy
+      state.ratings = (snap.exists && snap.data().items) || {};
+      render();
+    }, () => {});
+  }
+}
+
+start();
+</script>

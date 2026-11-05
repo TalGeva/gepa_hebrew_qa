@@ -1,3 +1,9 @@
-from hebqa.programs.qa import ExtractiveQA, build_extractive_qa, program_instructions
+from hebqa.programs.qa import (
+    AbstractiveQA,
+    ExtractiveQA,
+    build_abstractive_qa,
+    build_extractive_qa,
+    program_instructions,
+)
 
-__all__ = ["ExtractiveQA", "build_extractive_qa", "program_instructions"]
+__all__ = ["AbstractiveQA", "ExtractiveQA", "build_abstractive_qa", "build_extractive_qa", "program_instructions"]
