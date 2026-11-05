@@ -3,7 +3,7 @@ name = "hebqa"
 version = "0.1.0"
 description = "GEPA prompt optimization for Hebrew question answering"
 requires-python = ">=3.12"
-dependencies = ["dspy>=3.4", "gepa"]
+dependencies = ["dspy>=3.4", "gepa", "python-dotenv"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
