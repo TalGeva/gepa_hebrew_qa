@@ -9,6 +9,7 @@ Run from the project root:  python -m scripts.run_gepa_abstractive --judge sonne
 """
 
 import argparse
+from pathlib import Path
 import sys
 from dataclasses import asdict, replace
 
@@ -30,6 +31,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--auto", choices=["light", "medium", "heavy"], default=GEPAConfig.auto)
     # Qwen thinks at length on long documents; 4000 tokens left some answers empty.
     parser.add_argument("--max-tokens", type=int, default=16000)
+    parser.add_argument("--task-model", default=TASK_LM.model, help="task model id (OpenRouter id, or the server's id with --task-api-base)")
+    parser.add_argument("--task-api-base", default=None, help="OpenAI-compatible base URL for the task model instead of OpenRouter")
+    parser.add_argument("--reflection-model", default=REFLECTION_LM.model,
+                        help="OpenRouter id of the model that proposes new prompts (default: Sonnet)")
+    parser.add_argument("--seed", type=int, default=GEPAConfig.seed, help="GEPA random seed (candidate sampling, minibatches)")
+    parser.add_argument("--reflection-minibatch", type=int, default=GEPAConfig.reflection_minibatch_size,
+                        help="failed examples shown to the reflection model per rewrite")
+    parser.add_argument("--reflection-guidance-file", type=Path, default=None,
+                        help="text file with extra guidance for the reflection model, appended to every proposal prompt")
     parser.add_argument("--threads", type=int, default=GEPAConfig.num_threads)
     return parser.parse_args()
 
@@ -38,18 +48,30 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     args = parse_args()
     split_cfg = AbstractiveSplitConfig()
-    gepa_cfg = GEPAConfig(auto=args.auto, num_threads=args.threads)
-    task_cfg = replace(TASK_LM, max_tokens=args.max_tokens)
+    guidance = args.reflection_guidance_file.read_text(encoding="utf-8").strip() if args.reflection_guidance_file else None
+    gepa_cfg = GEPAConfig(auto=args.auto, num_threads=args.threads, seed=args.seed,
+                          reflection_minibatch_size=args.reflection_minibatch, reflection_guidance=guidance)
+    task_cfg = replace(TASK_LM, model=args.task_model, api_base=args.task_api_base, max_tokens=args.max_tokens)
     judge_cfg = JUDGE_LMS[args.judge]
+    reflection_cfg = replace(REFLECTION_LM, model=args.reflection_model)
 
     splits = load_abstractive_splits(split_cfg)
-    task_lm, reflection_lm, judge_lm = make_lm(task_cfg), make_lm(REFLECTION_LM), make_lm(judge_cfg)
+    task_lm, reflection_lm, judge_lm = make_lm(task_cfg), make_lm(reflection_cfg), make_lm(judge_cfg)
     dspy.configure(lm=task_lm)
     seed_program = build_abstractive_qa(args.seed_lang)
     judge_errors: list[str] = []
     metric = make_judge_metric(Judge(judge_lm), judge_errors)
 
-    log = RunLog(f"gepa_abstractive_{args.judge}_{args.auto}_{args.seed_lang}")
+    run_name = f"gepa_abstractive_{args.judge}_{args.auto}_{args.seed_lang}_{args.task_model.split('/')[-1]}"
+    if args.reflection_model != REFLECTION_LM.model:
+        run_name += f"_refl-{args.reflection_model.split('/')[-1]}"
+    if args.seed != GEPAConfig.seed:
+        run_name += f"_s{args.seed}"
+    if args.reflection_minibatch != GEPAConfig.reflection_minibatch_size:
+        run_name += f"_mb{args.reflection_minibatch}"
+    if guidance:
+        run_name += "_steer"
+    log = RunLog(run_name)
     record = {
         "stage": "abstractive/gepa",
         "judge": args.judge,
@@ -59,7 +81,7 @@ def main() -> None:
         "n_val": len(splits.val),
         "gepa": asdict(gepa_cfg),
         "task_lm": describe_lm(task_cfg),
-        "reflection_lm": describe_lm(REFLECTION_LM),
+        "reflection_lm": describe_lm(reflection_cfg),
         "judge_lm": describe_lm(judge_cfg),
         "rubric": JUDGE_INSTRUCTIONS,
         "seed_instructions": program_instructions(seed_program),

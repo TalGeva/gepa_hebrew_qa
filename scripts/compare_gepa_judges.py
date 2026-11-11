@@ -29,6 +29,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("runs", nargs="+", type=Path, help="run_gepa_abstractive output directories")
     parser.add_argument("--judges", nargs="+", choices=sorted(JUDGE_LMS), default=sorted(JUDGE_LMS))
     parser.add_argument("--max-tokens", type=int, default=16000)
+    parser.add_argument("--task-model", default=TASK_LM.model, help="task model id (OpenRouter id, or the server's id with --task-api-base)")
+    parser.add_argument("--task-api-base", default=None, help="OpenAI-compatible base URL for the task model instead of OpenRouter")
     parser.add_argument("--threads", type=int, default=8)
     return parser.parse_args()
 
@@ -36,7 +38,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     args = parse_args()
-    task_cfg = replace(TASK_LM, max_tokens=args.max_tokens)
+    task_cfg = replace(TASK_LM, model=args.task_model, api_base=args.task_api_base, max_tokens=args.max_tokens)
     task_lm = make_lm(task_cfg)
     dspy.configure(lm=task_lm)
     judge_lms = {name: make_lm(JUDGE_LMS[name]) for name in args.judges}

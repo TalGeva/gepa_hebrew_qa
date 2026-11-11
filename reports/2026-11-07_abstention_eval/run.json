@@ -1,0 +1,255 @@
+{
+  "stage": "abstention/eval",
+  "runs": [
+    "/home/noam/codebase/gepa/gepa_hebrew_qa/runs/2026-11-07_15-52-46_gepa_abstention_gemma_light_Hebatron_think-off"
+  ],
+  "task_lm": {
+    "provider": "openai-compatible",
+    "model": "HebArabNlpProject/Hebatron",
+    "temperature": 0.0,
+    "max_tokens": 4000,
+    "api_base": "http://localhost:8002/v1",
+    "top_p": null,
+    "extra_body": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      }
+    }
+  },
+  "thinking": "off",
+  "judges": [
+    "gemma"
+  ],
+  "n_test": 72,
+  "n_heq_test": 300,
+  "instructions": {
+    "seed": {
+      "self": "ענה על השאלה בעברית על סמך המסמך בלבד. כתוב תשובה מלאה ותמציתית במשפטים שלמים, במילים שלך, ואל תוסיף מידע שאינו מופיע במסמך. לאחר מכן פרט את הטענות שבתשובה: לכל טענה צרף ציטוט אחד או יותר, המועתקים מילה במילה מהמסמך ותומכים בה. אם המסמך אינו עונה על השאלה, כתוב: \"המידע המבוקש אינו מופיע במסמך.\" והשאר את רשימת הטענות ריקה."
+    },
+    "gepa_2026-11-07_15-52-46": {
+      "self": "ענה על השאלה בעברית על סמך המסמך בלבד. פעל לפי ההנחיות הבאות:\n\n1. **בדיקת זמינות מידע וסירוב מוחלט**: אם התשובה לשאלה אינה מופיעה במפורש ובאופן ישיר במסמך, או אם התשובה דורשת הסקה, שימוש בידע חיצוני, פרשנות של \"מי באמת\" או ניתוח נתונים שאינם קיימים, עליך לכתוב אך ורק את המשפט הבא: \"המידע המבוקש אינו מופיע במסמך.\" \n   - **במקרה של סירוב**: אסור להוסיף שום הסבר, אסור לכתוב תשובה חלקית, ואסור להוסיף רשימת טענות (השאר אותה ריקה). אל תנסה להסביר מדוע המידע חסר או לציין ש\"המסמך אינו מציין את המספר\". כתוב אך ורק את משפט הסירוב המדויק.\n\n2. **ניסוח התשובה**: אם המידע קיים במסמך, כתוב תשובה מלאה, תמציתית ובמשפטים שלמים. השתמש במילים שלך ואל תוסיף שום פרט, דעה או מידע שאינו מופיע בטקסט.\n\n3. **פירוט טענות וציטוטים מדויקים**: לאחר התשובה, פרט את הטענות המרכזיות שהובילו לתשובה. לכל טענה, צרף ציטוט אחד או יותר התומכים בה.\n   - **כלל הציטוט**: הציטוטים חייבים להיות מועתקים **מילה במילה** מהמסמך, כקטע רציף, ללא שינוי של אף תו, ללא תרגום לשפה אחרת וללא הוספת מילות קישור או הקדמות (כגון \"בטקסט נאמר כי...\"). העתק את הטקסט בדיוק כפי שהוא מופיע במקור.\n\n**דגש חשוב**: הימנע לחלוטין מ\"הזיות\" (Hallucinations). אם השאלה דורשת מסקנה שלא כתובה במפורש, התייחס לכך כמידע חסר והשתמש במשפט הסירוב."
+    }
+  },
+  "results": {
+    "seed": {
+      "abstractive": {
+        "abstention": {
+          "by_level": {
+            "0": {
+              "abstain": 2,
+              "answer": 18,
+              "hedge": 4,
+              "hybrid": 1
+            },
+            "1": {
+              "answer": 24
+            },
+            "2": {
+              "answer": 20,
+              "empty": 2,
+              "hedge": 1
+            }
+          },
+          "correct_abstention": {
+            "n": 2,
+            "of": 25
+          },
+          "wrong_abstention": {
+            "n": 0,
+            "of": 47
+          }
+        },
+        "attribution": {
+          "answers_with_claims": 45,
+          "answers_all_quotes_verbatim": 22,
+          "quotes": {
+            "verbatim": 65,
+            "of": 97
+          },
+          "claims": {
+            "total": 69,
+            "without_quote": 0
+          }
+        },
+        "gated": 0.5087,
+        "judge": {
+          "n": 72,
+          "errors": 0,
+          "empty_answers": 2,
+          "normalized": 0.7,
+          "criteria": {
+            "coherence": 1.847,
+            "relevance": 1.569,
+            "completeness": 1.306,
+            "faithfulness": 1.319,
+            "attribution": 0.958
+          },
+          "by_level": {
+            "0": 0.484,
+            "1": 0.8833,
+            "2": 0.7435
+          }
+        }
+      },
+      "heq": {
+        "abstention": {
+          "by_level": {
+            "0": {
+              "abstain": 7,
+              "answer": 134,
+              "empty": 3,
+              "hedge": 1,
+              "hybrid": 5
+            },
+            "1": {
+              "answer": 141,
+              "empty": 8,
+              "hedge": 1
+            }
+          },
+          "correct_abstention": {
+            "n": 7,
+            "of": 150
+          },
+          "wrong_abstention": {
+            "n": 0,
+            "of": 150
+          }
+        },
+        "attribution": {
+          "answers_with_claims": 142,
+          "answers_all_quotes_verbatim": 61,
+          "quotes": {
+            "verbatim": 139,
+            "of": 253
+          },
+          "claims": {
+            "total": 211,
+            "without_quote": 2
+          }
+        },
+        "gated": 0.3131
+      }
+    },
+    "gepa_2026-11-07_15-52-46": {
+      "abstractive": {
+        "abstention": {
+          "by_level": {
+            "0": {
+              "abstain": 3,
+              "answer": 18,
+              "hedge": 2,
+              "hybrid": 2
+            },
+            "1": {
+              "abstain": 1,
+              "answer": 23
+            },
+            "2": {
+              "answer": 22,
+              "hybrid": 1
+            }
+          },
+          "correct_abstention": {
+            "n": 3,
+            "of": 25
+          },
+          "wrong_abstention": {
+            "n": 1,
+            "of": 47
+          }
+        },
+        "attribution": {
+          "answers_with_claims": 46,
+          "answers_all_quotes_verbatim": 19,
+          "quotes": {
+            "verbatim": 94,
+            "of": 133
+          },
+          "claims": {
+            "total": 74,
+            "without_quote": 4
+          }
+        },
+        "gated": 0.4906,
+        "judge": {
+          "n": 72,
+          "errors": 0,
+          "empty_answers": 0,
+          "normalized": 0.7278,
+          "criteria": {
+            "coherence": 1.931,
+            "relevance": 1.708,
+            "completeness": 1.361,
+            "faithfulness": 1.319,
+            "attribution": 0.958
+          },
+          "by_level": {
+            "0": 0.592,
+            "1": 0.85,
+            "2": 0.7478
+          }
+        }
+      },
+      "heq": {
+        "abstention": {
+          "by_level": {
+            "0": {
+              "abstain": 42,
+              "answer": 99,
+              "empty": 3,
+              "hedge": 1,
+              "hybrid": 5
+            },
+            "1": {
+              "abstain": 2,
+              "answer": 142,
+              "empty": 6
+            }
+          },
+          "correct_abstention": {
+            "n": 42,
+            "of": 150
+          },
+          "wrong_abstention": {
+            "n": 2,
+            "of": 150
+          }
+        },
+        "attribution": {
+          "answers_with_claims": 142,
+          "answers_all_quotes_verbatim": 70,
+          "quotes": {
+            "verbatim": 157,
+            "of": 247
+          },
+          "claims": {
+            "total": 205,
+            "without_quote": 1
+          }
+        },
+        "gated": 0.4381
+      }
+    }
+  },
+  "usage": {
+    "task_lm": {
+      "calls": 866,
+      "cached_calls": 84,
+      "truncated_calls": 3,
+      "prompt_tokens": 1162786,
+      "completion_tokens": 161065,
+      "reasoning_tokens": 0,
+      "cost_usd": 0.0
+    },
+    "judge_gemma": {
+      "calls": 142,
+      "cached_calls": 6,
+      "truncated_calls": 0,
+      "prompt_tokens": 821411,
+      "completion_tokens": 48178,
+      "reasoning_tokens": 0,
+      "cost_usd": 0.107092
+    }
+  }
+}

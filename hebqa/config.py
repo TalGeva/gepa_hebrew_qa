@@ -42,11 +42,17 @@ class AbstractiveSplitConfig:
 
 @dataclass(frozen=True)
 class LMConfig:
-    """An OpenRouter model and its sampling settings."""
+    """A model and its sampling settings. OpenRouter by default; api_base points at any
+    OpenAI-compatible server instead (for example vLLM serving Hebatron on the cluster)."""
 
     model: str
     temperature: float
     max_tokens: int
+    api_base: str | None = None
+    top_p: float | None = None
+    # extra JSON fields for the request body, e.g. {"chat_template_kwargs": {"enable_thinking": False}}
+    # to switch a reasoning model's chat template (Hebatron/Nemotron: thinking is on by default)
+    extra_body: dict | None = None
 
 
 # Task model: Qwen 3.6, ~30B class.
@@ -72,3 +78,5 @@ class GEPAConfig:
     reflection_minibatch_size: int = 3
     seed: int = 0
     num_threads: int = 8
+    # extra guidance appended to every reflection prompt (steers how the reflection LM rewrites); None = GEPA default
+    reflection_guidance: str | None = None
