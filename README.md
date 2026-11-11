@@ -35,6 +35,7 @@ The judges come from outside the Qwen family, so the task model is never graded 
 1. **Pilot on HeQ (extractive QA).** Proves the pipeline end to end on a task with an automatic metric. Done.
 2. **The judge.** Builds and validates an LLM judge for abstractive answers against human ratings. Done; validation on fresh Qwen answers is waiting for human ratings.
 3. **GEPA on abstractive QA,** with the judge as the metric. First runs done.
+4. **Abstention.** Can GEPA teach a model to refuse when the document does not answer the question? Hebatron as the task model, Gemma as judge and proposer, HeQ unanswerable questions added to the pool. First round done.
 
 ---
 
@@ -222,6 +223,79 @@ minibatch, so GEPA skipped all 157 iterations without calling the reflection mod
 3. The gain measured by the optimizing judge needs human confirmation. The planned check is a
    blind side-by-side human comparison of the 21 test questions where the two prompts' answers differ.
 
+## Stage 4: abstention (Hebatron, open-weights loop)
+
+Stages 1 to 3 used answerable questions only, so they never tested the decision whether to
+answer at all. This stage puts that decision first. The task model is
+[Hebatron](https://huggingface.co/HebArabNlpProject/Hebatron) (Nemotron 3 Nano 30B-A3B,
+served with vLLM and reached through `--task-api-base`); judge and reflection model are both
+`google/gemma-4-31b-it`, so no closed model is in the loop. Hebatron's chat template thinks by
+default; the runs use thinking off (`--thinking off`), which gave more abstentions than thinking
+on with the same prompt.
+
+### What counts as abstention
+
+`hebqa/abstention.py` classifies every answer programmatically: `abstain` (the refusal sentence
+and no claims), `hybrid` (facts from the document followed by "the detail is missing"), `hedge`
+("probably", "it seems"), `answer`, `empty`. Only a clean `abstain` counts; a hybrid is a
+hallucination, because the model asserted content the question did not ask for.
+
+### The gated metric
+
+`hebqa/gated_metric.py`, the decision first and quality second:
+
+| item | score |
+|---|---|
+| Level 0 (unanswerable) | 1 for a clean abstention, 0 for anything else |
+| Answerable, answered with a refusal | 0 |
+| HeQ answerable | 0.5 if a gold span is in the answer + 0.5 x share of quotes copied verbatim |
+| Abstractive answerable | judge criteria weighted 0.35 factual correctness, 0.35 attribution, 0.15 completeness, 0.15 relevance; factual correctness 0 zeroes the item |
+
+Feedback is a Hebrew sentence naming the failure mode (hallucination, hybrid, hedge, wrong
+refusal, non-verbatim quote), which is what the reflection model reads.
+
+### Data
+
+The abstractive set alone has 25 unanswerable test questions, too few to optimize on, so
+`hebqa/data/heq_abstention.py` draws from HeQ v1.1 including its unanswerable questions (one
+answerable and one unanswerable question per passage, balanced): 150 train, 300 validation,
+300 test (`data/heq_abstention/`). `hebqa/data/combined.py` mixes them with the abstractive
+train and validation sets (pool: 179 train, 330 validation). The abstractive test set stays
+the primary held-out evaluation; the HeQ test sample is the secondary one.
+
+### Results (GEPA light, 6 candidates, 2,016 metric calls, about $0.25 of judge calls)
+
+Validation gated score 0.35 to 0.45. On the held-out sets, seed prompt versus optimized:
+
+| | HeQ test (150 level 0 + 150 answerable) | abstractive test (25 level 0 + 47 answerable) |
+|---|---|---|
+| Correct abstentions | 7 to 42 | 2 to 3 |
+| Wrong refusals | 0 to 2 | 0 to 1 |
+| Answers with every quote verbatim | 61 to 70 of 142 | 22 to 19 of 46 |
+| Judge factual correctness / attribution (0-2) | not judged | 1.32 / 0.96, unchanged |
+| Gated score | 0.31 to 0.44 | 0.51 to 0.49 |
+
+The prompt change moves abstention on short passages (5% to 28% of unanswerable HeQ questions
+refused, at the cost of two wrong refusals), but the gain does not transfer to long documents
+and abstractive questions, which are the target. In several of those cases the model answers
+from prior knowledge when the document does not contain the answer (for example a question
+about the Crimean War on a document that mentions it only in passing). That is a hypothesis to
+test directly, not a settled diagnosis.
+
+Full results: `reports/2026-11-07_gepa_abstention/` (configuration, seed and optimized
+prompts, all candidates) and `reports/2026-11-07_abstention_eval/` (per-item answers for both
+prompts on both test sets). A Hebrew executive summary of this stage is in
+`reports/2026-11-08_executive_summary.he.txt`. `scripts/build_review_page.py` renders the
+per-item files as an HTML page for manual review of the abstention decisions.
+
+### Next for this stage
+
+- Build level-0 examples that match the failure: questions the model can answer from general
+  knowledge but the attached document does not answer.
+- Manual review of the abstention cases, to check that the automatic classification matches
+  our judgment.
+- Only then decide whether prompt optimization is enough or the model itself needs tuning.
+
 ## Next steps
 
 - Human ratings of the 39 Qwen answers, then validate both judges on them.
@@ -240,8 +314,11 @@ hebqa/
   lm.py               OpenRouter clients; token and cost accounting
   claims.py           Claim model, verbatim quote check, rendering for the judge
   optimize.py         GEPA wrapper and candidate summary
+  abstention.py       answer classification (abstain, hybrid, hedge, answer, empty), attribution report
+  gated_metric.py     stage 4: abstention-first metric with Hebrew feedback
   evaluation.py       extractive evaluation (EM, F1, TLNLS)
-  data/               HeQ loader, abstractive loader (with data fixes), document-level split
+  data/               HeQ loader, abstractive loader (with data fixes), document-level split,
+                      HeQ abstention sample and the combined pool (stage 4)
   metrics/            Hebrew normalization, TLNLS, Hebrew feedback, GEPA metric for HeQ
   programs/           DSPy signatures and the Hebrew/English seed prompts
   judge/              rubric (Hebrew), judge, agreement statistics, GEPA judge metric
@@ -252,8 +329,14 @@ scripts/
   build_rating_pool.py     stage 2: Qwen answers for human rating
   run_gepa_abstractive.py  stage 3: GEPA with a judge as the metric
   compare_gepa_judges.py   stage 3: score prompts on test with every judge
+  build_heq_abstention_splits.py  stage 4: sample HeQ with unanswerable questions
+  run_prompt_on_test.py    stage 4: one prompt on test, abstention and verbatim-quote report
+  run_gepa_abstention.py   stage 4: GEPA on the combined pool with the gated metric
+  eval_abstention.py       stage 4: seed vs optimized on both test sets
+  build_review_page.py     stage 4: HTML page for manual review of answers
 labeling/judge_labeling.html   rating page for human annotators
-data/                          HeQ v1.1 and the abstractive QA set
+data/                          HeQ v1.1 and the abstractive QA set; heq_abstention/ (stage 4 sample)
+reports/                       stage 4 results and the Hebrew executive summary
 tests/                         pytest suite (no API calls)
 ```
 
@@ -283,6 +366,12 @@ python -m scripts.build_rating_pool --n 40
 python -m scripts.run_gepa_abstractive --judge sonnet
 python -m scripts.run_gepa_abstractive --judge gemma
 python -m scripts.compare_gepa_judges runs/<sonnet run> runs/<gemma run>
+
+# Stage 4 (task model on a vLLM server, e.g. through an SSH tunnel)
+python -m scripts.build_heq_abstention_splits
+python -m scripts.run_gepa_abstention --task-model HebArabNlpProject/Hebatron --task-api-base http://localhost:8002/v1 --thinking off
+python -m scripts.eval_abstention runs/<abstention run> --task-model HebArabNlpProject/Hebatron --task-api-base http://localhost:8002/v1 --thinking off
+python -m scripts.build_review_page seed=runs/<eval run>:seed final=runs/<eval run>:gepa_<timestamp>
 ```
 
 Approximate costs: a judge validation run is about $3.30 (Sonnet) and $0.10 (Gemma); a light

@@ -1,6 +1,7 @@
 """Run GEPA on a program and summarize what it found."""
 
 import dspy
+from dspy.teleprompt.gepa.instruction_proposal import InstructionProposer
 
 from hebqa.config import GEPAConfig
 from hebqa.metrics import make_gepa_metric
@@ -20,10 +21,12 @@ def run_gepa(
 
     metric defaults to the extractive TLNLS metric with cfg.feedback.
     """
+    proposer = InstructionProposer(additional_instructions=cfg.reflection_guidance) if cfg.reflection_guidance else None
     optimizer = dspy.GEPA(
         metric=metric or make_gepa_metric(cfg.feedback),
         auto=cfg.auto,
         reflection_lm=reflection_lm,
+        instruction_proposer=proposer,
         reflection_minibatch_size=cfg.reflection_minibatch_size,
         num_threads=cfg.num_threads,
         seed=cfg.seed,
