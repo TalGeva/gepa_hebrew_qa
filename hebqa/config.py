@@ -49,6 +49,7 @@ class LMConfig:
     temperature: float
     max_tokens: int
     api_base: str | None = None
+    api_key_env: str | None = None  # env var holding api_base's key (e.g. a Hugging Face endpoint); None = keyless
     top_p: float | None = None
     # extra JSON fields for the request body, e.g. {"chat_template_kwargs": {"enable_thinking": False}}
     # to switch a reasoning model's chat template (Hebatron/Nemotron: thinking is on by default)

@@ -15,10 +15,15 @@ def make_lm(cfg: LMConfig) -> dspy.LM:
         extra["top_p"] = cfg.top_p
     if cfg.extra_body:
         extra["extra_body"] = cfg.extra_body  # forwarded by LiteLLM into the request body
-    if cfg.api_base:  # a local OpenAI-compatible server; no key needed
-        return dspy.LM(f"openai/{cfg.model}", api_base=cfg.api_base, api_key="EMPTY",
-                       temperature=cfg.temperature, max_tokens=cfg.max_tokens, **extra)
     load_dotenv(PROJECT_ROOT / ".env")
+    if cfg.api_base:  # an OpenAI-compatible server; keyless (local vLLM) unless api_key_env is set
+        key = "EMPTY"
+        if cfg.api_key_env:
+            key = os.environ.get(cfg.api_key_env)
+            if not key:
+                raise RuntimeError(f"{cfg.api_key_env} is not set. Add it to .env in the project root (see .env.example).")
+        return dspy.LM(f"openai/{cfg.model}", api_base=cfg.api_base, api_key=key,
+                       temperature=cfg.temperature, max_tokens=cfg.max_tokens, **extra)
     if not os.environ.get("OPENROUTER_API_KEY"):
         raise RuntimeError("OPENROUTER_API_KEY is not set. Add it to .env in the project root (see .env.example).")
     return dspy.LM(f"openrouter/{cfg.model}", temperature=cfg.temperature, max_tokens=cfg.max_tokens, **extra)
